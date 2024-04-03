@@ -40,14 +40,10 @@ void addPlayer(playerT** head);
 void inputPlayerDetails(playerT* player);
 void displayPlayerDetails(playerT** head);
 void displayAllPlayers(playerT* head);
-void updatePlayerDetails(playerT* head);
-void deletePlayerDetails(playerT* head);
+void updatePlayerDetails(playerT** head);
+void deletePlayer(playerT** head);
 void generatePlayerStatistics(playerT* head);
 void saveDatabase(playerT* head);
-
-
-// List all the players of the following categories in order of height
-
 
 void main()
 {
@@ -92,12 +88,12 @@ void main()
 
 				//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
 				else if (choice == 4) {
-
+					updatePlayerDetails(myDatabase);
 				}					
 				
 				//Delete Player: Allows the user to delete a player from the list by IRFU number.
 				else if (choice == 5) {
-
+					deletePlayer(myDatabase);
 				}
 
 				// Generate statistics (a – h) based on a range of player weights
@@ -424,15 +420,116 @@ void displayPlayerDetails(playerT** head) {
 	}
 }
 
-
 //Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
-void updatePlayerDetails(playerT* head) {
+void updatePlayerDetails(playerT** head) {
+	if (*head == NULL) {
+		printf("The player list is empty.\n");
+		return;
+	}
 
+	int choice, irfuNumber;
+	char name[30];
+	playerT* current = *head;
+	printf("Update by:\n1. IRFU Number\n2. Name\nEnter choice: ");
+	scanf("%d", &choice);
+	clearInputBuffer(); // To handle any leftover characters in the input buffer
+
+	if (choice == 1) {
+		printf("Enter IRFU Number: ");
+		scanf("%d", &irfuNumber);
+		while (current != NULL) {
+			if (current->IRFU == irfuNumber) {
+				break;
+			}
+			current = current->next;
+		}
+	}
+	else if (choice == 2) {
+		printf("Enter Name: ");
+		fgets(name, 30, stdin);
+		name[strcspn(name, "\n")] = 0; // Remove newline character
+		while (current != NULL) {
+			if (strcmp(current->firstName, name) == 0 || strcmp(current->surname, name) == 0) {
+				break;
+			}
+			current = current->next;
+		}
+	}
+	else {
+		printf("Invalid choice.\n");
+		return;
+	}
+
+	if (current == NULL) {
+		printf("Player not found.\n");
+		return;
+	}
+
+	// Display current details
+	printf("Current Details:\n");
+	printf("IRFU: %d, Name: %s %s, Club: %s, Email: %s\n", current->IRFU, current->firstName, current->surname, current->club, current->email);
+
+	// Update club
+	printf("Enter new Club (or press enter to skip): ");
+	fgets(current->club, 30, stdin);
+	if (strcmp(current->club, "\n") == 0) { // Check if only enter was pressed
+		clearInputBuffer(); // Clear the '\n' if only enter was pressed
+	}
+	else {
+		current->club[strcspn(current->club, "\n")] = 0; // Remove newline character
+	}
+
+	// Update email
+	printf("Enter new Email (or press enter to skip): ");
+	fgets(current->email, 50, stdin);
+	if (strcmp(current->email, "\n") == 0) {
+		clearInputBuffer();
+	}
+	else {
+		current->email[strcspn(current->email, "\n")] = 0;
+	}
+
+	printf("Player details updated successfully.\n");
 }
 
-//Delete Player: Allows the user to delete a player from the list by IRFU number.
-void deletePlayerDetails(playerT* head) {
 
+//Delete Player: Allows the user to delete a player from the list by IRFU number.
+void deletePlayer(playerT** head) {
+	int IRFUNumber;
+	printf("Enter IRFU Number of the player to delete: ");
+	scanf("%d", &IRFUNumber);
+
+	if (*head == NULL) {
+		printf("The list is empty. No player to delete.\n");
+		return;
+	}
+
+	playerT* temp = *head, * prev = NULL;
+
+	// Deleting the head node if it matches the IRFU Number
+	if (temp != NULL && temp->IRFU == IRFUNumber) {
+		*head = temp->next; // Change head
+		free(temp); // Free old head
+		printf("Player with IRFU Number %d deleted successfully.\n", IRFUNumber);
+		return;
+	}
+
+	// Search for the player to be deleted
+	while (temp != NULL && temp->IRFU != IRFUNumber) {
+		prev = temp;
+		temp = temp->next;
+	}
+
+	// If the player with the specified IRFU Number is not found
+	if (temp == NULL) {
+		printf("Player with IRFU Number %d not found.\n", IRFUNumber);
+		return;
+	}
+
+	// Unlink the node from the list and free memory
+	prev->next = temp->next;
+	free(temp);
+	printf("Player with IRFU Number %d deleted successfully.\n", IRFUNumber);
 }
 
 // Generate statistics (a – h) based on a range of player weights
@@ -440,7 +537,7 @@ void generatePlayerStatistics(playerT* head) {
 
 }
 
-// Print all player details into a report file.
+// Print all player details into a report file - new file with labels
 void saveDatabase(playerT* head) {
 
 }

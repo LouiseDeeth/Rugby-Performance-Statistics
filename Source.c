@@ -39,7 +39,14 @@ void clearInputBuffer();
 void addPlayer(playerT** head);
 void inputPlayerDetails(playerT* player);
 void displayPlayerDetails(playerT** head);
-void displayAllPlayers(playerT** head);
+void displayAllPlayers(playerT* head);
+void updatePlayerDetails(playerT* head);
+void deletePlayerDetails(playerT* head);
+void generatePlayerStatistics(playerT* head);
+void saveDatabase(playerT* head);
+
+
+// List all the players of the following categories in order of height
 
 
 void main()
@@ -78,15 +85,13 @@ void main()
 					displayAllPlayers(myDatabase);
 				}
 
-				//Display Player Details: Allow the admin to input either a IRFU ID or a name of the player and display the details for that player.
+				//Display Player Details: Allow the user to input either a IRFU ID or a name of the player and display the details for that player.
 				else if (choice == 3) {
-
-
+					displayPlayerDetails(myDatabase);
 				}
 
-				//Update Player: Allows the admin to update player details based on either a name or IRFU number being entered.
+				//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
 				else if (choice == 4) {
-
 
 				}					
 				
@@ -102,7 +107,6 @@ void main()
 					
 				// Print all player details into a report file.
 				else if (choice == 7) {
-
 
 				}
 					
@@ -376,41 +380,31 @@ void displayAllPlayers(playerT* head) {
 //display player details using IFRU or name
 void displayPlayerDetails(playerT** head) {
 	long searchIRFUNum;
-	char searchNmae[30];
-	int found = 0;
+	char searchName[30];
+	int found = 0;// Flag to indicate if the player was found
 	int choice;
 
 	printf("Display Player Details\nSearch by:\n1.IRFU Number:\n2. Name\nEnter choice: ");
 	scanf("%d", &choice);
+	clearInputBuffer(); // Clear the input buffer so fgets works
 
 	playerT* current = head;
 
 	if (choice == 1) {
 		printf("Please enter the IRFU Number of the player you wish to find: ");
-		scanf("%ld", &searchIFRUNum);
-		while (current != NULL && !found) {
-			if (current->IRFU == searchIFRUNum) {
-				found = 1; // Player found
-				break;
-			}
-			current = current->next;
-		}
+		scanf("%ld", &searchIRFUNum);
+		clearInputBuffer(); // Clear the buffer after scanf
 	}
-	else if (choice == 2) {
-		printf("Please enter the name of the player you wish to find: ");
-		fgets(searchName, sizeof(searchName), stdin);
-		searchName[strcspn(searchName, "\n")] = 0; // Remove the newline character fgets leaves
-		while (current != NULL && !found) {
-			if (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0) {
-				found = 1; // Player found
-				break;
-			}
-			current = current->next;
+
+	playerT* current = head; // Use current pointer to traverse the list
+
+	while (current != NULL && !found) {
+		if ((choice == 1 && current->IRFU == searchIRFUNum) || // Check for IRFU match
+			(choice == 2 && (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0))) { // Or name match
+			found = 1; // Mark as found
+			break; // Exit loop
 		}
-	}
-	else {
-		printf("Invalid choice.\n");
-		return;
+		current = current->next; // Move to next node
 	}
 	if (found) {
 		printf("IRFU No: %d\n", current->IRFU);
@@ -429,3 +423,28 @@ void displayPlayerDetails(playerT** head) {
 		printf("Player not found)");
 	}
 }
+
+
+//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
+void updatePlayerDetails(playerT* head) {
+
+}
+
+//Delete Player: Allows the user to delete a player from the list by IRFU number.
+void deletePlayerDetails(playerT* head) {
+
+}
+
+// Generate statistics (a – h) based on a range of player weights
+void generatePlayerStatistics(playerT* head) {
+
+}
+
+// Print all player details into a report file.
+void saveDatabase(playerT* head) {
+
+}
+
+// List all the players of the following categories in order of height
+
+

@@ -8,9 +8,8 @@ statistics to be generated.*/
 #include<string.h>
 #include<stdlib.h>
 #include<stdbool.h>
+#include <float.h>
 #include<conio.h>
-
-#define MAX_USERS 10
 
 typedef struct player {
 	int IRFU;
@@ -36,26 +35,23 @@ typedef struct {
 void getPassword(char* password, int maxLength);
 bool login(const char* loginFilename);
 void clearInputBuffer();
+void loadDatabase(playerT** head, const char* filename);
 void addPlayer(playerT** head);
-void inputPlayerDetails(playerT* player);
 void displayPlayerDetails(playerT* head);
 void displayAllPlayers(playerT* head);
 void updatePlayerDetails(playerT** head);
 void deletePlayer(playerT** head);
 void generatePlayerStatistics(playerT* head);
 void saveDatabase(playerT* head);
+void swapPlayerData(playerT* a, playerT* b);
 void listByHeight(playerT* head);
 
-void main()
+int main()
 {
 	playerT* myDatabase = NULL;
 	int choice;
-	int numPlayers;
 	bool loggedIn = login("login.txt");
-	char password[8];
-	char passwordEntered[30];
-	char sysUsername[30];
-	char sysPassword[30];
+	loadDatabase(&myDatabase, "Rugby.txt");
 
 		if (loggedIn) {
 			printf("\n***Login successful***\n\n");
@@ -66,23 +62,23 @@ void main()
 			printf("Please enter 4 to update players statastics\n");
 			printf("Please enter 5 to delete a player\n");
 			printf("Please enter 6 to generate statistics\n");
-			printf("Please enter 7 to restore players details\n");
-			printf("Please enter 8 to retrieve player details\n");
+			printf("Please enter 7 to save to file\n");
+			printf("Please enter 8 to list players by height\n");
 			printf("Please enter -1 to terminate\n");
 			scanf("%d", &choice);
 
 			while (choice != -1) {
-				//Add player: This will add a new player at the correct position in your sorted linked list based on their IRFU Number.The IRFU number must be unique
+				//Add player: This will add a new player in linked list.The IRFU number must be unique
 				if (choice == 1) {
 					addPlayer(&myDatabase);
 				}	
 				//Display all players to screen: Display all player details to screen.
 				else if (choice == 2) {
-					displayAllPlayers(&myDatabase);
+					displayAllPlayers(myDatabase);
 				}
 				//Display Player Details: Allow the user to input either a IRFU ID or a name of the player and display the details for that player.
 				else if (choice == 3) {
-					displayPlayerDetails(&myDatabase);
+					displayPlayerDetails(myDatabase);
 				}
 				//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
 				else if (choice == 4) {
@@ -98,7 +94,7 @@ void main()
 				}				
 				// Print all player details into a report file.
 				else if (choice == 7) {
-					saveDatabase(myDatabase, numPlayers);
+					saveDatabase(myDatabase);
 				}			
 				// List all the players of the following categories in order of height
 				else if (choice == 8) {
@@ -111,14 +107,18 @@ void main()
 				printf("Please enter 4 to update players statastics\n");
 				printf("Please enter 5 to delete a player\n");
 				printf("Please enter 6 to generate statistics\n");
-				printf("Please enter 7 to restore players details\n");
-				printf("Please enter 8 to retrieve player details\n");
+				printf("Please enter 7 to save to file\n");
+				printf("Please enter 8 to list players by height\n");
 				printf("Please enter -1 to terminate\n");
 				scanf("%d", &choice);
 			}
 		}
 		else {
-			printf("Login failed\n");
+			printf("\nLogin failed\n");
+		}
+		if (myDatabase != NULL) {
+			printf("Saving player data to Rugby.txt\n");
+			saveDatabase(myDatabase);
 		}
 		printf("Exiting!\n");
 		return 0;
@@ -155,6 +155,9 @@ bool login(const char* loginFilename) {
 	char sysUsername[30];
 	char sysPassword[30];
 	int recordCount = 0;
+	bool loginSuccess = false;
+	int attempts = 0;
+
 	FILE* fp = fopen(loginFilename, "r");
 
 	if (fp == NULL) {
@@ -163,33 +166,78 @@ bool login(const char* loginFilename) {
 	}
 
 	//read the number of login records
-	fscanf(fp, "%d", &recordCount);
+	fscanf(fp, "%d\n", &recordCount);
 
-	//Prompt user for username and password
-	printf("Please enter username: ");
-	scanf("%s", usernameEntered);
-	clearInputBuffer();
+	while (attempts < 3 && !loginSuccess) {//allow 3 attempts
+		//Prompt user for username and password
+		printf("Attempt %d - Please enter username: ", attempts + 1);
+		scanf("%s", usernameEntered);
+		clearInputBuffer();
 
-	printf("Please enter password: ");
-	getPassword(passwordEntered, sizeof(passwordEntered));
-	//printf("\nDEBUG: Password on file: %s and Password entered: %s\n", sysPassword, passwordEntered);
+		printf("Please enter password: ");
+		getPassword(passwordEntered, sizeof(passwordEntered));
+		//printf("\nDEBUG: Password on file: %s and Password entered: %s\n", sysPassword, passwordEntered);
 
-	for (int i = 0; i < recordCount; i++) {
-		if (fscanf(fp, "%s %s", sysUsername, sysPassword) == 2) {
-			if (strcmp(usernameEntered, sysUsername) == 0 && strcmp(passwordEntered, sysPassword) == 0) {
-				fclose(fp);
-				return true; // Successful login
-			}
+		rewind(fp); //go to beginning of the file
+		fscanf(fp, "%d\n", &recordCount);
+
+		for (int i = 0; i < recordCount; i++) {
+			fscanf(fp, "%s %s", sysUsername, sysPassword);
+				if (strcmp(usernameEntered, sysUsername) == 0 && strcmp(passwordEntered, sysPassword) == 0) {
+					loginSuccess = true;// Successful login
+					break;
+				}
+		}
+		if (!loginSuccess) {
+			printf("\nLogin attempt %d failed.\n", attempts + 1);
+			attempts++;
 		}
 	}
 	fclose(fp);
-	return false;//login fails if there is no matching record
+	return loginSuccess;// return true if successful, false if not
 }
 
 //clear the buffer
 void clearInputBuffer() {
 	int c;
 	while ((c = getchar()) != '\n' && c != EOF) {}
+}
+
+void loadDatabase(playerT** head, const char* filename) {
+	FILE* file = fopen(filename, "r");
+	if (file == NULL) {
+		printf("Could not open the file %s for reading.\n", filename);
+		return;
+	}
+
+	// Prepare a temporary structure to read into
+	playerT tempPlayer;
+	while (fscanf(file, "%d %s %s %d %f %f %s %s %s %s %s\n",
+		&tempPlayer.IRFU, tempPlayer.firstName, tempPlayer.surname, &tempPlayer.age,
+		&tempPlayer.height, &tempPlayer.weight, tempPlayer.club, tempPlayer.email,
+		tempPlayer.position, tempPlayer.missedTackles, tempPlayer.metresMade) == 11) {
+		// Allocate a new node and copy the data from tempPlayer
+		playerT* newPlayer = (playerT*)malloc(sizeof(playerT));
+		if (newPlayer == NULL) {
+			printf("Memory allocation failed.\n");
+			continue; // Skip this player if we cannot allocate memory
+		}
+		*newPlayer = tempPlayer; // Copy data
+		newPlayer->next = NULL;
+
+		// Insert the new player into the list
+		if (*head == NULL) {
+			*head = newPlayer; // The list was empty, newPlayer is now the head
+		}
+		else {
+			playerT* current = *head;
+			while (current->next != NULL) {
+				current = current->next;
+			}
+			current->next = newPlayer; // Append newPlayer at the end of the list
+		}
+	}
+	fclose(file);
 }
 
 // Function to check if an IRFU number is unique
@@ -211,115 +259,100 @@ void addPlayer(playerT** head) {
 		printf("Memory allocation error : Not enough memory.\n");
 		return;
 	}
-
 	newPlayer->next = NULL;
 
+	printf("Enter player details:\n");
 	// Prompt for IRFU number and check for uniqueness
 	do {
-		printf("Enter player details:\n");
 		printf("Enter IRFU Number: ");
 		scanf("%d", &newPlayer->IRFU);
+		clearInputBuffer();
 		if (!isIRFUUnique(*head, newPlayer->IRFU)) {
-			printf("A player with IRFU number %d already exists. Please enter a different IRFU number.\n", newPlayer->IRFU);
+			printf("A player with IRFU number %d already exists. Please enter a different IRFU number: \n", newPlayer->IRFU);
 		}
 		else {
 			break; //exit loop if IRFU is unique
 		}
-	} while (true);
+	} while (1);
 
-	// Input player details
-	inputPlayerDetails(newPlayer);
-
-	// Find correct position and insert
-	playerT** tracer = head;//tracer points to the address of the 'head' pointer
-	while (*tracer != NULL && (*tracer)->IRFU < newPlayer->IRFU) {
-		tracer = &(*tracer)->next;
-	}
-	newPlayer->next = *tracer;
-	*tracer = newPlayer;
-
-	printf("Player added successfully.\n\n");
-}
-
-//inputing player details
-void inputPlayerDetails(playerT* player) {
 	int choice;
 
+	// Input player details
 	//First name
 	printf("First Name: ");
-	scanf("%29s", player->firstName);
-	
+	scanf("%29s", newPlayer->firstName);
+
 	//Surname
 	printf("Surname: ");
-	scanf("%29s", player->surname);
-	
+	scanf("%29s", newPlayer->surname);
+
 	//Age must be positive
 	do {
 		printf("Age: ");
-		scanf("%d", &player->age);
-		if (player->age <= 0) {
+		scanf("%d", &newPlayer->age);
+		if (newPlayer->age <= 0) {
 			printf("Invalid age. Please enter a positive number.\n");
 		}
-	} while (player->age <= 0);
-	
+	} while (newPlayer->age <= 0 || newPlayer->age >= 90);
+
 	//Height
 	do {
 		printf("Height (in meters): ");
-		scanf("%f", &player->height);
-		if (player->height <= 0 || player->height > 3) {
+		scanf("%f", &newPlayer->height);
+		if (newPlayer->height <= 0 || newPlayer->height > 3) {
 			printf("Invalid height. Please enter a positive number less than or equal to 3.\n");
 		}
-	} while (player->height <= 0 || player->height > 3);
-	
+	} while (newPlayer->height <= 0 || newPlayer->height > 3);
+
 	//Weight
 	do {
 		printf("Weight (in kg): ");
-		scanf("%f", &player->weight);
-		if (player->weight <= 0) {
-			printf("Invalid weight. Please enter a positive number.\n");
+		scanf("%f", &newPlayer->weight);
+		if (newPlayer->weight <= 0 || newPlayer->weight >= 300) {
+			printf("Invalid weight. Please enter a positive number less than or equal to 300.\n");
 		}
-	} while (player->weight <= 0);
-	
+	} while (newPlayer->weight <= 0 || newPlayer->weight >= 300);
+
 	//Club
 	printf("Club: ");
-	scanf("%s", player->club);
-	
+	scanf("%29s", newPlayer->club);
+
 	//Email address - (must contain an @, a full stop and a .com)
 	printf("Email Address: ");
-	scanf("%s", player->email);
-	while (!strstr(player->email, "@") || !strstr(player->email, ".com")) {
+	scanf("%s", newPlayer->email);
+	while (!strstr(newPlayer->email, "@") || !strstr(newPlayer->email, ".com")) {
 		printf("Invalid email. Please include an '@' and a '.com': ");
-		scanf("%s", player->email);
+		scanf("%s", newPlayer->email);
 	}
-	
+
 	// Player Position
 	do {
 		printf("Choose Player Position:\n");
 		printf("   1. Prop\n   2. Hooker\n   3. Second Row\n   4. Back Row\n   5. Half Back\n   6. Centres\n   7. Wingers/Full Back\n");
 		scanf("%d", &choice);
 		switch (choice) {
-			case 1: strcpy(player->position, "Prop"); break;
-			case 2: strcpy(player->position, "Hooker"); break;
-			case 3: strcpy(player->position, "Second Row"); break;
-			case 4: strcpy(player->position, "Back Row"); break;
-			case 5: strcpy(player->position, "Half Back"); break;
-			case 6: strcpy(player->position, "Centres"); break;
-			case 7: strcpy(player->position, "Wingers/Full Back"); break;
-			default: strcpy(player->position, "Unknown"); break;
+			case 1: strcpy(newPlayer->position, "Prop"); break;
+			case 2: strcpy(newPlayer->position, "Hooker"); break;
+			case 3: strcpy(newPlayer->position, "Second Row"); break;
+			case 4: strcpy(newPlayer->position, "Back Row"); break;
+			case 5: strcpy(newPlayer->position, "Half Back"); break;
+			case 6: strcpy(newPlayer->position, "Centres"); break;
+			case 7: strcpy(newPlayer->position, "Wingers/Full Back"); break;
+			default: strcpy(newPlayer->position, "Unknown"); break;
 		}
 	} while (choice < 1 || choice > 7);
 
 	// Missed Tackles
-		do {
+	do {
 		printf("How many tackles does the player miss per match?\n");
 		printf("   1. Never\n   2. Less than three times\n   3. Less than five times\n   4. More than five times\n");
 		scanf("%d", &choice);
 		switch (choice) {
-			case 1: strcpy(player->missedTackles, "Never"); break;
-			case 2: strcpy(player->missedTackles, "Less than three times"); break;
-			case 3: strcpy(player->missedTackles, "Less than five times"); break;
-			case 4: strcpy(player->missedTackles, "More than five times"); break;
-			default: strcpy(player->missedTackles, "Unknown"); break;
+			case 1: strcpy(newPlayer->missedTackles, "Never"); break;
+			case 2: strcpy(newPlayer->missedTackles, "Less than three times"); break;
+			case 3: strcpy(newPlayer->missedTackles, "Less than five times"); break;
+			case 4: strcpy(newPlayer->missedTackles, "More than five times"); break;
+			default: strcpy(newPlayer->missedTackles, "Unknown"); break;
 		}
 	} while (choice < 1 || choice > 4);
 
@@ -329,26 +362,50 @@ void inputPlayerDetails(playerT* player) {
 		printf("   1. None\n   2. Less than 10 metres\n   3. Less than 20 metres\n   4. More than 20 metres\n");
 		scanf("%d", &choice);
 		switch (choice) {
-			case 1: strcpy(player->metresMade, "None"); break;
-			case 2: strcpy(player->metresMade, "Less than 10 metres"); break;
-			case 3: strcpy(player->metresMade, "Less than 20 metres"); break;
-			case 4: strcpy(player->metresMade, "More than 20 metres"); break;
-			default: strcpy(player->metresMade, "Unknown"); break;
+			case 1: strcpy(newPlayer->metresMade, "None"); break;
+			case 2: strcpy(newPlayer->metresMade, "Less than 10 metres"); break;
+			case 3: strcpy(newPlayer->metresMade, "Less than 20 metres"); break;
+			case 4: strcpy(newPlayer->metresMade, "More than 20 metres"); break;
+			default: strcpy(newPlayer->metresMade, "Unknown"); break;
 		}
 	} while (choice < 1 || choice > 4);
+	clearInputBuffer();	// Clear buffer after all inputs
 
-	// Flush stdin buffer 
-	clearInputBuffer();
+	// Add new player at the end of the list
+	if (*head == NULL) {
+		*head = newPlayer; // The list was empty, newPlayer is now the head
+	}
+	else {
+		playerT* current = *head;
+		while (current->next != NULL) {
+			current = current->next; 
+		}
+		current->next = newPlayer; // Insert newPlayer at the end
+	}
+	printf("Player added successfully.\n\n");
+
+		//DEBUG
+		/*printf("IRFU No: %d\n", newPlayer->IRFU);
+		printf("First Name: %s\n", newPlayer->firstName);
+		printf("Surname: %s\n", newPlayer->surname);
+		printf("Age: %d\n", newPlayer->age);
+		printf("Height: %.2f m\n", newPlayer->height);
+		printf("Weight: %.2f kg\n", newPlayer->weight);
+		printf("Club: %s\n", newPlayer->club);
+		printf("Email: %s\n", newPlayer->email);
+		printf("Position: %s\n", newPlayer->position);
+		printf("Missed Tackles: %s\n", newPlayer->missedTackles);
+		printf("Metres Made: %s\n", newPlayer->metresMade);
+		printf("\n");*/
 }
 
 // Display all players to screen: Display all player details to screen.
 void displayAllPlayers(playerT* head) {
-	playerT* current = head;
-	if (current == NULL) {
+	if (head == NULL) {
 		printf("No players in the database.\n");
 		return;
 	}
-
+	playerT* current = head;
 	while (current != NULL) {
 		printf("IRFU No: %d\n", current->IRFU);
 		printf("First Name: %s\n", current->firstName);
@@ -362,155 +419,149 @@ void displayAllPlayers(playerT* head) {
 		printf("Missed Tackles: %s\n", current->missedTackles);
 		printf("Metres Made: %s\n", current->metresMade);
 		printf("\n");
-
-		// Move to the next player
 		current = current->next;
 	}
 }
 
 //display player details using IFRU or name
-void displayPlayerDetails(playerT* head) {
-	int choice;
-	int searchIRFUNum;
-	char searchName[30];
-	bool found = false;
+void displayPlayerDetails(playerT * head) {
+		int choice;
+		int searchIRFUNum;
+		char searchName[30];
+		bool found = false;
 
-	printf("Display Player Details\nSearch by:\n1. IRFU Number\n2. Name\nEnter choice: ");
-	scanf("%d", &choice);
-	clearInputBuffer(); // Clears the input buffer
+		printf("Display Player Details\nSearch by:\n1. IRFU Number\n2. Name\nEnter choice: ");
+		scanf("%d", &choice);
+		clearInputBuffer(); // Clears the input buffer
 
-	playerT* current = head;
+		playerT* current = head;
 
-	if (choice == 1) {
-		printf("Enter the IRFU Number: ");
-		scanf("%d", &searchIRFUNum);
-		while (current != NULL) {
-			if (current->IRFU == searchIRFUNum) {
-				found = true;
-				break;
+		if (choice == 1) {
+			printf("Enter the IRFU Number: ");
+			scanf("%d", &searchIRFUNum);
+			while (current != NULL) {
+				if (current->IRFU == searchIRFUNum) {
+					found = true;
+					break;
+				}
+				current = current->next;
 			}
-			current = current->next;
+		}
+		else if (choice == 2) {
+			printf("Enter the player's name: ");
+			scanf("%29s", searchName);
+			while (current != NULL) {
+				if (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0) {
+					found = true;
+					break;
+				}
+				current = current->next;
+			}
+		}
+		if (found && current != NULL) {
+			// Display the found player's details
+			printf("Player Details:\n");
+			printf("IRFU Number: %d\n", current->IRFU);
+			printf("Name: %s %s\n", current->firstName, current->surname);
+			printf("Age: %d\n", current->age);
+			printf("Height: %.2f m\n", current->height);
+			printf("Weight: %.2f kg\n", current->weight);
+			printf("Club: %s\n", current->club);
+			printf("Email: %s\n", current->email);
+			printf("Position: %s\n", current->position);
+			printf("Missed Tackles: %s\n", current->missedTackles);
+			printf("Metres Made: %s\n", current->metresMade);
+			printf("\n");
+		}
+		else {
+			printf("Player not found.\n");
 		}
 	}
-	else if (choice == 2) {
-		printf("Enter the player's name: ");
-		// fgets might be safer here, but ensure it works as expected with your buffer clearing
-		scanf("%29s", searchName);
-		while (current != NULL) {
-			if (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0) {
-				found = true;
-				break;
-			}
-			current = current->next;
-		}
-	}
-
-	if (found && current != NULL) {
-		// Display the found player's details
-		printf("Player Details:\n");
-		printf("IRFU Number: %d\n", current->IRFU);
-		printf("Name: %s %s\n", current->firstName, current->surname);
-		printf("Age: %d\n", current->age);
-		printf("Height: %.2f m\n", current->height);
-		printf("Weight: %.2f kg\n", current->weight);
-		printf("Club: %s\n", current->club);
-		printf("Email: %s\n", current->email);
-		printf("Position: %s\n", current->position);
-		printf("Missed Tackles: %s\n", current->missedTackles);
-		printf("Metres Made: %s\n", current->metresMade);
-		printf("\n");
-	}
-	else {
-		printf("Player not found.\n");
-	}
-}
-
 
 //Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
-void updatePlayerDetails(playerT** head) {
-	if (*head == NULL) {
-		printf("The list is empty.\n");
-		return;
-	}
-
-	int choice, IRFUNumber;
-	char searchName[30];
-	playerT* current = *head;
-	printf("Update by:\n1. IRFU Number\n2. Name\nEnter choice: ");
-	scanf("%d", &choice);
-	clearInputBuffer(); // To handle any leftover characters in the input buffer
-
-	if (choice == 1) {
-		printf("Enter IRFU Number: ");
-		scanf("%d", &IRFUNumber);
-		while (current != NULL) {
-			if (current->IRFU == IRFUNumber) {
-				break;
-			}
-			current = current->next;
+void updatePlayerDetails(playerT * *head) {
+		if (*head == NULL) {
+			printf("The list is empty.\n");
+			return;
 		}
-	}
-	else if (choice == 2) {
-		printf("Enter Name: ");
-		fgets(searchName, 30, stdin);
-		searchName[strcspn(searchName, "\n")] = 0; // Remove newline character
-		while (current != NULL) {
-			if (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0) {
-				break;
+
+		int choice, IRFUNumber;
+		char searchName[30];
+		playerT* current = *head;
+		printf("Update by:\n1. IRFU Number\n2. Name\nEnter choice: ");
+		scanf("%d", &choice);
+		clearInputBuffer(); // To handle any leftover characters in the input buffer
+
+		if (choice == 1) {
+			printf("Enter IRFU Number: ");
+			scanf("%d", &IRFUNumber);
+			while (current != NULL) {
+				if (current->IRFU == IRFUNumber) {
+					break;
+				}
+				current = current->next;
 			}
-			current = current->next;
 		}
-	}
-	else {
-		printf("Invalid choice.\n");
-		return;
-	}
+		else if (choice == 2) {
+			printf("Enter Name: ");
+			fgets(searchName, 30, stdin);
+			searchName[strcspn(searchName, "\n")] = 0; // Remove newline character
+			while (current != NULL) {
+				if (strcmp(current->firstName, searchName) == 0 || strcmp(current->surname, searchName) == 0) {
+					break;
+				}
+				current = current->next;
+			}
+		}
+		else {
+			printf("Invalid choice.\n");
+			return;
+		}
+		if (current == NULL) {
+			printf("Player not found.\n");
+			return;
+		}
 
-	if (current == NULL) {
-		printf("Player not found.\n");
-		return;
-	}
+		// Update Player Position
+		printf("Select new Player Position:\n");
+		printf("1. Prop\n2. Hooker\n3. Second Row\n4. Back Row\n5. Half Back\n6. Centres\n7. Wingers/Full Back\n");
+		scanf("%d", &choice);
+		switch (choice) {
+			case 1: strcpy(current->position, "Prop"); break;
+			case 2: strcpy(current->position, "Hooker"); break;
+			case 3: strcpy(current->position, "Second Row"); break;
+			case 4: strcpy(current->position, "Back Row"); break;
+			case 5: strcpy(current->position, "Half Back"); break;
+			case 6: strcpy(current->position, "Centres"); break;
+			case 7: strcpy(current->position, "Wingers/Full Back"); break;
+			default: printf("Invalid choice.\n"); return;
+		}
 
-	// Update Player Position
-	printf("Select new Player Position:\n");
-	printf("1. Prop\n2. Hooker\n3. Second Row\n4. Back Row\n5. Half Back\n6. Centres\n7. Wingers/Full Back\n");
-	scanf("%d", &choice);
-	switch (choice) {
-		case 1: strcpy(current->position, "Prop"); break;
-		case 2: strcpy(current->position, "Hooker"); break;
-		case 3: strcpy(current->position, "Second Row"); break;
-		case 4: strcpy(current->position, "Back Row"); break;
-		case 5: strcpy(current->position, "Half Back"); break;
-		case 6: strcpy(current->position, "Centres"); break;
-		case 7: strcpy(current->position, "Wingers/Full Back"); break;
-		default: printf("Invalid choice.\n"); return;
-	}
+		// Update Tackles Missed
+		printf("Select how many tackles does the player miss per match:\n");
+		printf("1. Never\n2. Less than three times per match\n3. Less than five times per match\n4. More than five times per match\n");
+		scanf("%d", &choice);
+		switch (choice) {
+			case 1: strcpy(current->missedTackles, "Never"); break;
+			case 2: strcpy(current->missedTackles, "Less than three times"); break;
+			case 3: strcpy(current->missedTackles, "Less than five times"); break;
+			case 4: strcpy(current->missedTackles, "More than five times"); break;
+			default: printf("Invalid choice.\n"); return;
+		}
 
-	// Update Tackles Missed
-	printf("Select how many tackles does the player miss per match:\n");
-	printf("1. Never\n2. Less than three times per match\n3. Less than five times per match\n4. More than five times per match\n");
-	scanf("%d", &choice);
-	switch (choice) {
-		case 1: strcpy(current->missedTackles, "Never"); break;
-		case 2: strcpy(current->missedTackles, "Less than three times"); break;
-		case 3: strcpy(current->missedTackles, "Less than five times"); break;
-		case 4: strcpy(current->missedTackles, "More than five times"); break;
-		default: printf("Invalid choice.\n"); return;
+		// Update Metres Made
+		printf("Select how many metres does the player make in a game:\n");
+		printf("1. None\n2. Less than 10 metres\n3. Less than 20 metres\n4. More than 20 metres\n");
+		scanf("%d", &choice);
+		switch (choice) {
+			case 1: strcpy(current->metresMade, "None"); break;
+			case 2: strcpy(current->metresMade, "Less than 10 metres"); break;
+			case 3: strcpy(current->metresMade, "Less than 20 metres"); break;
+			case 4: strcpy(current->metresMade, "More than 20 metres"); break;
+			default: printf("Invalid choice.\n"); return;
+		}
+		printf("Player details updated successfully.\n");
 	}
-
-	// Update Metres Made
-	printf("Select how many metres does the player make in a game:\n");
-	printf("1. None\n2. Less than 10 metres\n3. Less than 20 metres\n4. More than 20 metres\n");
-	scanf("%d", &choice);
-	switch (choice) {
-		case 1: strcpy(current->metresMade, "None"); break;
-		case 2: strcpy(current->metresMade, "Less than 10 metres"); break;
-		case 3: strcpy(current->metresMade, "Less than 20 metres"); break;
-		case 4: strcpy(current->metresMade, "More than 20 metres"); break;
-		default: printf("Invalid choice.\n"); return;
-	}
-	printf("Player details updated successfully.\n");
-}
 
 //Delete Player: Allows the user to delete a player from the list by IRFU number.
 void deletePlayer(playerT** head) {
@@ -529,7 +580,7 @@ void deletePlayer(playerT** head) {
 	if (temp != NULL && temp->IRFU == IRFUNumber) {
 		*head = temp->next; // Change head
 		free(temp); // Free old head
-		printf("Player with IRFU Number %d deleted successfully.\n", IRFUNumber);
+		printf("\nPlayer with IRFU Number %d deleted successfully.\n\n", IRFUNumber);
 		return;
 	}
 
@@ -592,29 +643,87 @@ void generatePlayerStatistics(playerT* head) {
 	printf("H. %% of players who make more than 20 metres in a game: %.2f%%\n", 100.0 * moreThanTwentyMetresMade / totalPlayers);
 }
 
-
 // Print all player details into a report file - new file with labels
 void saveDatabase(playerT* head) {
 	FILE* op;
 	playerT* current = head;
 
-	op = fopen("Rugby.txt", "a");
+	op = fopen("Rugby.txt", "w");
 
 	if (op == NULL)
 		printf("Sorry the database could not be backed up\n");
 	else
 	{
+		fprintf(op, "%d %s %s %d %f %f %s %s %s %s %s\n", "IRFU", "First Name", "Surname", "Age", "Height", "Weight", "Club", "Email", "Position", "Missed Tackles", "Metres Made");
+
 		while (current != NULL) {
 			fprintf(op, "%d %s %s %d %.2f %.2f %s %s %s %s %s\n",
-				current->IRFU, current->firstName, current->surname, current->age, current->height, current->weight, current->club, 
-				current->email, current->position, current->missedTackles, current->metresMade);
+				current->IRFU, current->firstName, current->surname, current->age,
+				current->height, current->weight, current->club, current->email,
+				current->position, current->missedTackles, current->metresMade);
 			current = current->next;
 		}
 		fclose(op);
 	}
 }
 
+void swapPlayerData(playerT* a, playerT* b) {
+	playerT temp = *a;
+	a->IRFU = b->IRFU;
+	strcpy(a->firstName, b->firstName);
+	strcpy(a->surname, b->surname);
+	a->age = b->age;
+	a->height = b->height;
+	a->weight = b->weight;
+	strcpy(a->club, b->club);
+	strcpy(a->email, b->email);
+	strcpy(a->position, b->position);
+	strcpy(a->missedTackles, b->missedTackles);
+	strcpy(a->metresMade, b->metresMade);
+
+	b->IRFU = temp.IRFU;
+	strcpy(b->firstName, temp.firstName);
+	strcpy(b->surname, temp.surname);
+	b->age = temp.age;
+	b->height = temp.height;
+	b->weight = temp.weight;
+	strcpy(b->club, temp.club);
+	strcpy(b->email, temp.email);
+	strcpy(b->position, temp.position);
+	strcpy(b->missedTackles, temp.missedTackles);
+	strcpy(b->metresMade, temp.metresMade);
+}
+
 // List all the players of the following categories in order of height
 void listByHeight(playerT* head) {
+	if (head == NULL) {
+		printf("The player list is empty.\n");
+		return;
+	}
 
+	int swapped;
+	playerT* ptr1;
+	playerT* lptr = NULL;
+
+	//Checking for empty list
+	if (head == NULL) {
+		return;
+	}
+
+	do {
+		swapped = 0;
+		ptr1 = head;
+
+		while (ptr1->next != lptr) {
+			if (ptr1->height > ptr1->next->height) {
+				swapPlayerData(ptr1, ptr1->next);
+				swapped = 1;
+			}
+			ptr1 = ptr1->next;
+		}
+		lptr = ptr1;
+	} while (swapped);
+
+	// Now the list is sorted, display all players
+	displayAllPlayers(head);
 }

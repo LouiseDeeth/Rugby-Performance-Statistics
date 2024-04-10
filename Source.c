@@ -13,28 +13,24 @@ statistics to be generated.*/
 
 typedef struct player {
 	int IRFU;
-	char firstName[30];
-	char surname[25];
+	char firstName[15];
+	char surname[15];
 	int age;
 	float height;
 	float weight;
-	char club[30];
-	char email[50];
+	char club[15];
+	char email[35];
 	char position[20];
-	char missedTackles[30];
-	char metresMade[30];
+	char missedTackles[22];
+	char metresMade[20];
 	struct player* next;
 }playerT;
-
-typedef struct {
-	char username[30];
-	char passwordEntered[7];//6 characters and null terminator
-}LoginT;
 
 //Functions
 void getPassword(char* password, int maxLength);
 bool login(const char* loginFilename);
 void clearInputBuffer();
+void displayMenu(playerT** head);
 void loadDatabase(playerT** head, const char* filename);
 void addPlayer(playerT** head);
 void displayPlayerDetails(playerT* head);
@@ -46,96 +42,36 @@ void saveDatabase(playerT* head);
 void swapPlayerData(playerT* a, playerT* b);
 void listByHeight(playerT* head);
 
-int main()
-{
+int main() {
+	printf(" * * * * * * * * * * * * * * * * * * * * * * * * * * \n");
+	printf("\t    Rugby Performance Metric Ltd.\n");
+	printf(" * * * * * * * * * * * * * * * * * * * * * * * * * * \n\n");
 	playerT* myDatabase = NULL;
-	int choice;
 	bool loggedIn = login("login.txt");
-	loadDatabase(&myDatabase, "Rugby.txt");
+	loadDatabase(&myDatabase, "Rugby.txt");	
 
-		if (loggedIn) {
-			printf("\n***Login successful***\n\n");
-
-			printf("Please enter 1 to add a player\n");
-			printf("Please enter 2 to display all players to screen\n");
-			printf("Please enter 3 to display player details\n");
-			printf("Please enter 4 to update players statastics\n");
-			printf("Please enter 5 to delete a player\n");
-			printf("Please enter 6 to generate statistics\n");
-			printf("Please enter 7 to save to file\n");
-			printf("Please enter 8 to list players by height\n");
-			printf("Please enter -1 to terminate\n");
-			scanf("%d", &choice);
-
-			while (choice != -1) {
-				//Add player: This will add a new player in linked list.The IRFU number must be unique
-				if (choice == 1) {
-					addPlayer(&myDatabase);
-				}	
-				//Display all players to screen: Display all player details to screen.
-				else if (choice == 2) {
-					displayAllPlayers(myDatabase);
-				}
-				//Display Player Details: Allow the user to input either a IRFU ID or a name of the player and display the details for that player.
-				else if (choice == 3) {
-					displayPlayerDetails(myDatabase);
-				}
-				//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.
-				else if (choice == 4) {
-					updatePlayerDetails(&myDatabase);
-				}								
-				//Delete Player: Allows the user to delete a player from the list by IRFU number.
-				else if (choice == 5) {
-					deletePlayer(&myDatabase);
-				}
-				// Generate statistics (a – h) based on a range of player weights
-				else if (choice == 6) {
-					generatePlayerStatistics(&myDatabase);
-				}				
-				// Print all player details into a report file.
-				else if (choice == 7) {
-					saveDatabase(myDatabase);
-				}			
-				// List all the players of the following categories in order of height
-				else if (choice == 8) {
-					listByHeight(myDatabase);
-				}
-
-				printf("Please enter 1 to add a player\n");
-				printf("Please enter 2 to display all players to screen\n");
-				printf("Please enter 3 to display player details\n");
-				printf("Please enter 4 to update players statastics\n");
-				printf("Please enter 5 to delete a player\n");
-				printf("Please enter 6 to generate statistics\n");
-				printf("Please enter 7 to save to file\n");
-				printf("Please enter 8 to list players by height\n");
-				printf("Please enter -1 to terminate\n");
-				scanf("%d", &choice);
-			}
-		}
-		else {
-			printf("\nLogin failed\n");
-		}
-		if (myDatabase != NULL) {
-			printf("Saving player data to Rugby.txt\n");
-			saveDatabase(myDatabase);
-		}
-		printf("Exiting!\n");
-		return 0;
+	if (loggedIn) {
+		printf("\n***Login successful***\n");
+		displayMenu(&myDatabase);
+	}
+	else {
+		printf("\nLogin failed\n");
+	}
 }
 	
-//Functions
+//FUNCTIONS
+
 //Get password with asterisk
 void getPassword(char* password, int maxLength) {
 	int i = 0;
 	char ch;
 	while (i < maxLength - 1) {
 		ch = _getch();//reads a character without echoing it
-		if (ch == 13) {//enter key is pressed
+		if (ch == 13) {//character 13 is enter key
 			break;
 		}
-		else if (ch == 8) {//handles backspace
-			if (i > 0){
+		else if (ch == 8) {//character 8 is backspace
+			if (i > 0) {
 				i--;
 				printf("\b \b");
 			}
@@ -150,6 +86,7 @@ void getPassword(char* password, int maxLength) {
 
 //login function
 bool login(const char* loginFilename) {
+	//DEBUG: return true;
 	char usernameEntered[30];
 	char passwordEntered[30];
 	char sysUsername[30];
@@ -183,10 +120,10 @@ bool login(const char* loginFilename) {
 
 		for (int i = 0; i < recordCount; i++) {
 			fscanf(fp, "%s %s", sysUsername, sysPassword);
-				if (strcmp(usernameEntered, sysUsername) == 0 && strcmp(passwordEntered, sysPassword) == 0) {
-					loginSuccess = true;// Successful login
-					break;
-				}
+			if (strcmp(usernameEntered, sysUsername) == 0 && strcmp(passwordEntered, sysPassword) == 0) {
+				loginSuccess = true;// Successful login
+				break;
+			}
 		}
 		if (!loginSuccess) {
 			printf("\nLogin attempt %d failed.\n", attempts + 1);
@@ -203,26 +140,45 @@ void clearInputBuffer() {
 	while ((c = getchar()) != '\n' && c != EOF) {}
 }
 
+// Print all player details into a report file - new file with labels
+void saveDatabase(playerT* head) {
+	FILE* op = fopen("Rugby.txt", "w");
+
+	if (op == NULL) {
+		printf("File could not be opened.\n");
+	}
+	// Iterate through the linked list to write each player's data
+	for (playerT* current = head; current != NULL; current = current->next) {
+		fprintf(op, "IRFU: %d, FirstName: %s, Surname: %s, Age: %d, Height: %.2f, Weight: %.2f, Club: %s, Email: %s, Position: %s, MissedTackles: %s, MetresMade: %s.\n",
+			current->IRFU, current->firstName, current->surname, current->age, current->height, current->weight,
+			current->club, current->email, current->position, current->missedTackles, current->metresMade);
+	}
+		fclose(op);
+		printf("Database saved successfully.\n");
+}
+
+//load database from file
 void loadDatabase(playerT** head, const char* filename) {
 	FILE* file = fopen(filename, "r");
 	if (file == NULL) {
-		printf("Could not open the file %s for reading.\n", filename);
+		printf("\nCould not open the file %s for reading.\n", filename);
 		return;
 	}
 
-	// Prepare a temporary structure to read into
-	playerT tempPlayer;
-	while (fscanf(file, "%d %s %s %d %f %f %s %s %s %s %s\n",
-		&tempPlayer.IRFU, tempPlayer.firstName, tempPlayer.surname, &tempPlayer.age,
-		&tempPlayer.height, &tempPlayer.weight, tempPlayer.club, tempPlayer.email,
-		tempPlayer.position, tempPlayer.missedTackles, tempPlayer.metresMade) == 11) {
-		// Allocate a new node and copy the data from tempPlayer
+	char line[1024]; // Assuming a line will not exceed this length
+
+	while (fgets(line, sizeof(line), file) != NULL) {
 		playerT* newPlayer = (playerT*)malloc(sizeof(playerT));
 		if (newPlayer == NULL) {
 			printf("Memory allocation failed.\n");
 			continue; // Skip this player if we cannot allocate memory
 		}
-		*newPlayer = tempPlayer; // Copy data
+
+		// Now parse the line for player data
+		sscanf(line, "IRFU: %d, FirstName: %[^,], Surname: %[^,], Age: %d, Height: %f, Weight: %f, Club: %[^,], Email: %[^,], Position: %[^,], MissedTackles: %[^,], MetresMade: %[^.].",
+			&newPlayer->IRFU, newPlayer->firstName, newPlayer->surname, &newPlayer->age, &newPlayer->height, &newPlayer->weight, newPlayer->club, newPlayer->email,
+			newPlayer->position, newPlayer->missedTackles, newPlayer->metresMade);
+
 		newPlayer->next = NULL;
 
 		// Insert the new player into the list
@@ -238,6 +194,75 @@ void loadDatabase(playerT** head, const char* filename) {
 		}
 	}
 	fclose(file);
+}
+
+//Menu
+void displayMenu(playerT** head) {
+	int choice;
+	do {
+		printf("\nMenu Options:\n");
+		printf("Please enter 1 to add a player\n");
+		printf("Please enter 2 to display all players to screen\n");
+		printf("Please enter 3 to display player details\n");
+		printf("Please enter 4 to update players statastics\n");
+		printf("Please enter 5 to delete a player\n");
+		printf("Please enter 6 to generate statistics\n");
+		printf("Please enter 7 to save to file\n");
+		printf("Please enter 8 to list players by height\n");
+		printf("Please enter -1 to terminate\n");
+		scanf("%d", &choice);
+		clearInputBuffer();
+
+		if (choice == -1) {
+			printf("Exiting!\n");
+			break; // Immediately exit the loop if -1 is entered
+		}
+
+		switch (choice) {
+			//Add player: This will add a new player in linked list.The IRFU number must be unique
+		case 1:
+			addPlayer(head);
+			break;
+			//Display all players to screen: Display all player details to screen.
+		case 2:
+			displayAllPlayers(*head);
+			break;
+			//Display Player Details: Allow the user to input either a IRFU ID or a name of the player and display the details for that player.			
+		case 3:
+			displayPlayerDetails(*head);
+			break;
+			//Update Player: Allows the user to update player statistics based on either a name or IRFU number being entered.			
+		case 4:
+			updatePlayerDetails(head);
+			break;
+			//Delete Player: Allows the user to delete a player from the list by IRFU number.			
+		case 5:
+			deletePlayer(head);
+			break;
+			// Generate statistics (a – h) based on a range of player weights			
+		case 6:
+			generatePlayerStatistics(*head);
+			break;
+			// Print all player details into a report file.			
+		case 7:
+			saveDatabase(*head);
+			break;
+			// List all the players of the following categories in order of height			
+		case 8:
+			listByHeight(*head);
+			break;
+		case 0:
+			printf("Exiting!\n");
+
+			if (*head != NULL) {
+				printf("Saving player data to Rugby.txt\n");
+				saveDatabase(*head);
+			}
+			break;
+		default:
+			printf("Invalid choice. Please try again.\n");
+		}
+	} while (choice != -1);
 }
 
 // Function to check if an IRFU number is unique
@@ -460,7 +485,7 @@ void displayPlayerDetails(playerT * head) {
 		}
 		if (found && current != NULL) {
 			// Display the found player's details
-			printf("Player Details:\n");
+			printf("\nPlayer Details:\n");
 			printf("IRFU Number: %d\n", current->IRFU);
 			printf("Name: %s %s\n", current->firstName, current->surname);
 			printf("Age: %d\n", current->age);
@@ -474,7 +499,7 @@ void displayPlayerDetails(playerT * head) {
 			printf("\n");
 		}
 		else {
-			printf("Player not found.\n");
+			printf("Player not found.\n\n");
 		}
 	}
 
@@ -643,30 +668,7 @@ void generatePlayerStatistics(playerT* head) {
 	printf("H. %% of players who make more than 20 metres in a game: %.2f%%\n", 100.0 * moreThanTwentyMetresMade / totalPlayers);
 }
 
-// Print all player details into a report file - new file with labels
-void saveDatabase(playerT* head) {
-	FILE* op;
-	playerT* current = head;
-
-	op = fopen("Rugby.txt", "w");
-
-	if (op == NULL)
-		printf("Sorry the database could not be backed up\n");
-	else
-	{
-		fprintf(op, "%d %s %s %d %f %f %s %s %s %s %s\n", "IRFU", "First Name", "Surname", "Age", "Height", "Weight", "Club", "Email", "Position", "Missed Tackles", "Metres Made");
-
-		while (current != NULL) {
-			fprintf(op, "%d %s %s %d %.2f %.2f %s %s %s %s %s\n",
-				current->IRFU, current->firstName, current->surname, current->age,
-				current->height, current->weight, current->club, current->email,
-				current->position, current->missedTackles, current->metresMade);
-			current = current->next;
-		}
-		fclose(op);
-	}
-}
-
+//swap player data to be able to sort by height
 void swapPlayerData(playerT* a, playerT* b) {
 	playerT temp = *a;
 	a->IRFU = b->IRFU;

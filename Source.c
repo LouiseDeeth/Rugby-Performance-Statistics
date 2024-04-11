@@ -174,7 +174,7 @@ void loadDatabase(playerT** head, const char* filename) {
 			continue; // Skip this player if we cannot allocate memory
 		}
 
-		// Now parse the line for player data
+		// Parse the line for player data
 		sscanf(line, "IRFU: %d, FirstName: %[^,], Surname: %[^,], Age: %d, Height: %f, Weight: %f, Club: %[^,], Email: %[^,], Position: %[^,], MissedTackles: %[^,], MetresMade: %[^.].",
 			&newPlayer->IRFU, newPlayer->firstName, newPlayer->surname, &newPlayer->age, &newPlayer->height, &newPlayer->weight, newPlayer->club, newPlayer->email,
 			newPlayer->position, newPlayer->missedTackles, newPlayer->metresMade);
@@ -634,39 +634,71 @@ void generatePlayerStatistics(playerT* head) {
 		return;
 	}
 
+	float minWeight, maxWeight;
+	printf("Please enter the weight range you would like to see statistics for:\nEnter minimum weight (kg): ");
+	scanf("%f", &minWeight);
+	printf("Enter maximum weight (kg): ");
+	scanf("%f", &maxWeight);
+
+	FILE* statsFile = fopen("PlayerStatistics.txt", "a");
+	if (!statsFile) {
+		printf("Could not open file.\n");
+		return;
+	}
+
 	int totalPlayers = 0;
 	int noTacklesMissed = 0, lessThanThreeTacklesMissed = 0, lessThanFiveTacklesMissed = 0, moreThanFiveTacklesMissed = 0;
 	int noMetresMade = 0, lessThanTenMetresMade = 0, lessThanTwentyMetresMade = 0, moreThanTwentyMetresMade = 0;
 
 	playerT* current = head;
 	while (current != NULL) {
-		totalPlayers++;
+		if (current->weight >= minWeight && current->weight <= maxWeight) {
+			totalPlayers++;
 
-		// Tackles
-		if (strcmp(current->missedTackles, "Never") == 0) noTacklesMissed++;
-		else if (strcmp(current->missedTackles, "Less than three times") == 0) lessThanThreeTacklesMissed++;
-		else if (strcmp(current->missedTackles, "Less than five times") == 0) lessThanFiveTacklesMissed++;
-		else if (strcmp(current->missedTackles, "More than five times") == 0) moreThanFiveTacklesMissed++;
+			// Tackles
+			if (strcmp(current->missedTackles, "Never") == 0) noTacklesMissed++;
+			else if (strcmp(current->missedTackles, "Less than three times") == 0) lessThanThreeTacklesMissed++;
+			else if (strcmp(current->missedTackles, "Less than five times") == 0) lessThanFiveTacklesMissed++;
+			else if (strcmp(current->missedTackles, "More than five times") == 0) moreThanFiveTacklesMissed++;
 
-		// Metres
-		if (strcmp(current->metresMade, "None") == 0) noMetresMade++;
-		else if (strcmp(current->metresMade, "Less than 10 metres") == 0) lessThanTenMetresMade++;
-		else if (strcmp(current->metresMade, "Less than 20 metres") == 0) lessThanTwentyMetresMade++;
-		else if (strcmp(current->metresMade, "More than 20 metres") == 0) moreThanTwentyMetresMade++;
-
+			// Metres
+			if (strcmp(current->metresMade, "None") == 0) noMetresMade++;
+			else if (strcmp(current->metresMade, "Less than 10 metres") == 0) lessThanTenMetresMade++;
+			else if (strcmp(current->metresMade, "Less than 20 metres") == 0) lessThanTwentyMetresMade++;
+			else if (strcmp(current->metresMade, "More than 20 metres") == 0) moreThanTwentyMetresMade++;
+		}
 		current = current->next;
 	}
+	if (totalPlayers > 0) {
+		printf("\nPlayer Statistics for players between %.2fkg and %.2fkg.\n", minWeight, maxWeight);
+		printf("A. %% of players who miss no tackles: %.2f%%\n", 100.0 * noTacklesMissed / totalPlayers);
+		printf("B. %% of players who miss less than 3 tackles per match: %.2f%%\n", 100.0 * lessThanThreeTacklesMissed / totalPlayers);
+		printf("C. %% of players who miss less than 5 tackles per match: %.2f%%\n", 100.0 * lessThanFiveTacklesMissed / totalPlayers);
+		printf("D. %% of players who miss more than 5 tackles per match: %.2f%%\n", 100.0 * moreThanFiveTacklesMissed / totalPlayers);
+		printf("E. %% of players who make no metres in a game: %.2f%%\n", 100.0 * noMetresMade / totalPlayers);
+		printf("F. %% of players who make less than 10 metres in a game: %.2f%%\n", 100.0 * lessThanTenMetresMade / totalPlayers);
+		printf("G. %% of players who make less than 20 metres in a game: %.2f%%\n", 100.0 * lessThanTwentyMetresMade / totalPlayers);
+		printf("H. %% of players who make more than 20 metres in a game: %.2f%%\n", 100.0 * moreThanTwentyMetresMade / totalPlayers);
+		
+		fprintf(statsFile, "\nPlayer Statistics for players between %.2fkg and %.2fkg.\n", minWeight, maxWeight);
+		fprintf(statsFile, "A. %% of players who miss no tackles: %.2f%%\n", 100.0 * noTacklesMissed / totalPlayers);
+		fprintf(statsFile, "B. %% of players who miss less than 3 tackles per match: %.2f%%\n", 100.0 * lessThanThreeTacklesMissed / totalPlayers);
+		fprintf(statsFile, "C. %% of players who miss less than 5 tackles per match: %.2f%%\n", 100.0 * lessThanFiveTacklesMissed / totalPlayers);
+		fprintf(statsFile, "D. %% of players who miss more than 5 tackles per match: %.2f%%\n", 100.0 * moreThanFiveTacklesMissed / totalPlayers);
+		fprintf(statsFile, "E. %% of players who make no metres in a game: %.2f%%\n", 100.0 * noMetresMade / totalPlayers);
+		fprintf(statsFile, "F. %% of players who make less than 10 metres in a game: %.2f%%\n", 100.0 * lessThanTenMetresMade / totalPlayers);
+		fprintf(statsFile, "G. %% of players who make less than 20 metres in a game: %.2f%%\n", 100.0 * lessThanTwentyMetresMade / totalPlayers);
+		fprintf(statsFile, "H. %% of players who make more than 20 metres in a game: %.2f%%\n", 100.0 * moreThanTwentyMetresMade / totalPlayers);
 
-	printf("Player Statistics:\n");
-	printf("A. %% of players who miss no tackles: %.2f%%\n", 100.0 * noTacklesMissed / totalPlayers);
-	printf("B. %% of players who miss less than 3 tackles per match: %.2f%%\n", 100.0 * lessThanThreeTacklesMissed / totalPlayers);
-	printf("C. %% of players who miss less than 5 tackles per match: %.2f%%\n", 100.0 * lessThanFiveTacklesMissed / totalPlayers);
-	printf("D. %% of players who miss more than 5 tackles per match: %.2f%%\n", 100.0 * moreThanFiveTacklesMissed / totalPlayers);
-	printf("E. %% of players who make no metres in a game: %.2f%%\n", 100.0 * noMetresMade / totalPlayers);
-	printf("F. %% of players who make less than 10 metres in a game: %.2f%%\n", 100.0 * lessThanTenMetresMade / totalPlayers);
-	printf("G. %% of players who make less than 20 metres in a game: %.2f%%\n", 100.0 * lessThanTwentyMetresMade / totalPlayers);
-	printf("H. %% of players who make more than 20 metres in a game: %.2f%%\n", 100.0 * moreThanTwentyMetresMade / totalPlayers);
+		printf("Statistics successfully written to PlayerStatistics.txt\n");
+	}
+	else {
+		printf("No players found within the weight range entered of %.2fkg to %.2fkg.\n", minWeight, maxWeight);
+		fprintf(statsFile, "No players found within the weight range entered of %.2fkg to %.2fkg.\n", minWeight, maxWeight);
+	}
+	fclose(statsFile);
 }
+
 
 //swap player data to be able to sort by height
 void swapPlayerData(playerT* a, playerT* b) {

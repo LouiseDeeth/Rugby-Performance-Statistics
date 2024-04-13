@@ -26,6 +26,12 @@ typedef struct player {
 	struct player* next;
 }playerT;
 
+
+typedef struct {
+	char username[30];
+	char password[30];
+} LoginCredential;
+
 //Functions
 void getPassword(char* password, int maxLength);
 bool login(const char* loginFilename);
@@ -87,8 +93,7 @@ void getPassword(char* password, int maxLength) {
 //login function
 bool login(const char* loginFilename) {
 	//DEBUG: return true;
-	char usernameEntered[30];
-	char passwordEntered[30];
+	LoginCredential creds;
 	char sysUsername[30];
 	char sysPassword[30];
 	int recordCount = 0;
@@ -98,7 +103,7 @@ bool login(const char* loginFilename) {
 	FILE* fp = fopen(loginFilename, "r");
 
 	if (fp == NULL) {
-		printf("Could not open login file!\n\n");
+		printf("Could not open login file '%s'!\n\n", loginFilename);
 		return false;
 	}
 
@@ -108,11 +113,11 @@ bool login(const char* loginFilename) {
 	while (attempts < 3 && !loginSuccess) {//allow 3 attempts
 		//Prompt user for username and password
 		printf("Attempt %d - Please enter username: ", attempts + 1);
-		scanf("%s", usernameEntered);
+		scanf("%s", creds.username);
 		clearInputBuffer();
 
 		printf("Please enter password: ");
-		getPassword(passwordEntered, sizeof(passwordEntered));
+		getPassword(creds.password, sizeof(creds.password));
 		//printf("\nDEBUG: Password on file: %s and Password entered: %s\n", sysPassword, passwordEntered);
 
 		rewind(fp); //go to beginning of the file
@@ -120,7 +125,7 @@ bool login(const char* loginFilename) {
 
 		for (int i = 0; i < recordCount; i++) {
 			fscanf(fp, "%s %s", sysUsername, sysPassword);
-			if (strcmp(usernameEntered, sysUsername) == 0 && strcmp(passwordEntered, sysPassword) == 0) {
+			if (strcmp(creds.username, sysUsername) == 0 && strcmp(creds.password, sysPassword) == 0) {
 				loginSuccess = true;// Successful login
 				break;
 			}

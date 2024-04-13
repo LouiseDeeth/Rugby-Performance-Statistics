@@ -1,0 +1,10 @@
+
+Player Statistics for players between 50.00kg and 150.00kg.
+A. % of players who miss no tackles: 16.67%
+B. % of players who miss less than 3 tackles per match: 16.67%
+C. % of players who miss less than 5 tackles per match: 50.00%
+D. % of players who miss more than 5 tackles per match: 16.67%
+E. % of players who make no metres in a game: 16.67%
+F. % of players who make less than 10 metres in a game: 0.00%
+G. % of players who make less than 20 metres in a game: 33.33%
+H. % of players who make more than 20 metres in a game: 50.00%
